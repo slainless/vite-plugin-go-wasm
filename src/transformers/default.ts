@@ -12,7 +12,6 @@ export function defaultTransformer(
   options?: DefaultTransformerOptions
 ): Transformer {
   let opts: Required<DefaultTransformerOptions>
-  let wasmExecRefId: string, goInstanceRefId: string
 
   return {
     wasmExecVirtualPath: DEFAULT_WASM_EXEC_VIRTUAL_PATH,
