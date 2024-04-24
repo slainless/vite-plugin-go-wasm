@@ -1,16 +1,15 @@
 {
   "extends": "@tsconfig/node-lts/tsconfig.json",
-  "includes": [
-    "src"
-  ],
+  "includes": ["src"],
   "compilerOptions": {
     "declaration": true,
     "emitDeclarationOnly": false,
     "outDir": "dist",
-    "esModuleInterop": true,    
+    "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
     "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true
   }
 }

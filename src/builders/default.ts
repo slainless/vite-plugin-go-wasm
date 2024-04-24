@@ -1,11 +1,11 @@
-import { Builder } from '../interface'
+import type { Builder } from '../interface'
 import { extname, join, relative } from 'node:path'
 import { config } from 'node:process'
 import { execFile } from 'node:child_process'
-import { DefaultBuilderOptions, resolveOptions } from './default/config'
+import { type DefaultBuilderOptions, resolveOptions } from './default/config'
 import { readFile } from 'node:fs/promises'
 
-export { DefaultBuilderOptions } from './default/config'
+export type { DefaultBuilderOptions } from './default/config'
 
 export function defaultBuilder(options?: DefaultBuilderOptions): Builder {
   let opts: Required<DefaultBuilderOptions>

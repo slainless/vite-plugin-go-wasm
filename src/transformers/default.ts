@@ -1,7 +1,10 @@
 import { basename } from 'node:path'
-import { Transformer } from '../interface'
+import type { Transformer } from '../interface'
 import { readFile } from 'node:fs/promises'
-import { DefaultTransformerOptions, resolveOptions } from './default/config'
+import {
+  type DefaultTransformerOptions,
+  resolveOptions,
+} from './default/config'
 
 export const DEFAULT_WASM_EXEC_VIRTUAL_PATH = 'go_wasm:wasm_exec'
 
