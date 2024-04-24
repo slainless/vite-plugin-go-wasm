@@ -2,6 +2,7 @@ import { describe, it } from 'vitest'
 
 describe('Build process', () => {
   it('compiles source to correct output path')
+  it('returns correct output path in build()')
   it('calls compiler binary with format and environment')
 
   it('handles error of external build call')

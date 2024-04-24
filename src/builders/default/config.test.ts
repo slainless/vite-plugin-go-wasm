@@ -2,9 +2,7 @@ import { describe, it } from 'vitest'
 
 describe('Option resolving', () => {
   it('resolves options.binaryPath correctly')
-  it(
-    'resolves options.binaryPath to `${process.env.GOROOT}/bin/go` if its empty'
-  )
+  it('resolves options.binaryPath to GOROOT fallback path if its empty')
   it(
     'throws error when both process.env.GOROOT and options.binaryPath are empty'
   )
