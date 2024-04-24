@@ -13,22 +13,25 @@ beforeAll(async () => {
 })
 
 describe('Initial plugin loading', () => {
-  it('Should expect correct Builder from option')
-  it('Should expect correct Transformer from option')
+  it('can fallback to default Builder')
+  it('can fallback to default Transformer')
+
+  it('expect correct Builder from option')
+  it('expect correct Transformer from option')
 })
 
 describe('Plugin runtime execution', () => {
-  it('Should execute Builder.buildStart on buildStart hook')
-  it('Should execute Transformer.buildStart on buildStart hook')
-  it('Should execute Transformer.loadWasmExec on load hook')
-  it('Should execute Builder.build on transform hook')
-  it('Should execute Transformer.transform on transform hook')
-  it('Should execute Transformer.loadWasmExec on load hook')
+  it('execute Builder.buildStart on buildStart hook')
+  it('execute Transformer.buildStart on buildStart hook')
+  it('execute Transformer.loadWasmExec on load hook')
+  it('execute Builder.build on transform hook')
+  it('execute Transformer.transform on transform hook')
+  it('execute Transformer.loadWasmExec on load hook')
 })
 
 describe('Plugin runtime output', () => {
-  it('Should resolve virtual module for wasm_exec correctly')
-  it('Should load virtual module for wasm_exec correctly')
-  it('Should only load .go files')
-  it('Should only transform .go files')
+  it('resolve virtual module for wasm_exec correctly')
+  it('load virtual module for wasm_exec correctly')
+  it('only load .go files')
+  it('only transform .go files')
 })
