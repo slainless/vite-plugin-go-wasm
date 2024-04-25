@@ -4,7 +4,10 @@ import { rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 
-function removeTempDirSync(dir: string) {
+/**
+ * @internal
+ */
+export function removeTempDirSync(dir: string) {
   if (basename(dir).match(/^go-wasm-.{6}$/)) {
     rmSync(dir, {
       recursive: true,

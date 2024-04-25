@@ -1,4 +1,4 @@
-import { stat } from 'node:fs/promises'
+import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import {
@@ -16,10 +16,11 @@ import { ChildProcess, exec } from 'node:child_process'
 import { sleep } from '../../../test/util'
 import {
   cleanupTempDir,
+  ignoreExist,
   snapshotTempDir,
   stubTempDir,
   tmpDirPattern,
-} from './util.ignore.test'
+} from './util.test'
 
 const tempDirStub = './test/tmp/default-builders-temp-dir-test'
 
@@ -149,5 +150,12 @@ describe('Temporary directory cleanup', () => {
 
     snapshot = await snapshotTempDir()
     expect(snapshot).to.be.lengthOf(0)
+  })
+})
+
+describe('Temporary directory removal implementation', () => {
+  it("silently return without doing anything when basename don't match with temp dir pattern", async () => {
+    await mkdir('./test/tmp/to_be_removed').catch(ignoreExist)
+    // await remove
   })
 })

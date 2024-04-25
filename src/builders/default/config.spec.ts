@@ -6,7 +6,7 @@ import {
   snapshotTempDir,
   stubTempDir,
   tmpDirPattern,
-} from './util.ignore.test'
+} from './util.test'
 import { mkdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'

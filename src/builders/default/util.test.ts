@@ -36,8 +36,10 @@ export async function stubTempDir(dir: string) {
   vi.stubEnv('TMP', dir)
   vi.stubEnv('TMPDIR', dir)
 
-  await mkdir(dir, { recursive: true }).catch((e) => {
-    if (getSystemErrorName(e.errno) == 'EEXIST') return
-    throw e
-  })
+  await mkdir(dir, { recursive: true }).catch(ignoreExist)
+}
+
+export function ignoreExist(e: any) {
+  if (getSystemErrorName(e.errno) == 'EEXIST') return
+  throw e
 }
