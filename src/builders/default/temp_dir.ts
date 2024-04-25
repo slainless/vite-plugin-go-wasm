@@ -3,7 +3,6 @@ import { mkdtemp } from 'node:fs/promises'
 import { rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import type { ResolvedConfig } from 'vite'
 
 function removeTempDirSync(dir: string) {
   if (basename(dir).match(/^go-wasm-.{6}$/)) {

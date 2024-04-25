@@ -1,17 +1,30 @@
-import { assert, beforeEach, describe, expect, it, vi } from 'vitest'
+import { assert, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resolveOptions } from './config'
 import { afterEach } from 'node:test'
-import { cleanupTempDir, snapshotTempDir, tmpDirPattern } from './temp_dir.test'
-import { stat } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import {
+  cleanupTempDir,
+  snapshotTempDir,
+  stubTempDir,
+  tmpDirPattern,
+} from './_test_util'
+import { mkdir, stat } from 'node:fs/promises'
+import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { getSystemErrorName } from 'node:util'
 
 const goRootStub = '/test/path/to/go'
+const tempDirStub = './test/tmp/default-builders-config-test'
 
 describe('Option resolving', () => {
+  beforeAll(async () => {
+    await stubTempDir(tempDirStub)
+  })
+
   beforeEach(() => {
     vi.stubEnv('GOROOT', goRootStub)
   })
+
+  afterEach(vi.unstubAllEnvs)
 
   beforeEach(cleanupTempDir)
 

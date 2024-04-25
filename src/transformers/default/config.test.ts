@@ -1,11 +1,13 @@
-import { assert, beforeEach, describe, expect, it, vi } from 'vitest'
+import { assert, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resolveOptions } from './config'
 
 const goRootStub = '/test/path/to/go'
 
 describe('Option resolving', () => {
-  beforeEach(() => {
+  beforeAll(() => {
     vi.stubEnv('GOROOT', goRootStub)
+
+    return () => vi.unstubAllEnvs()
   })
 
   it('resolves options.wasmExecPath correctly', async () => {

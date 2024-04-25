@@ -1,53 +1,38 @@
-import { type Dirent } from 'node:fs'
-import { readdir, rm, stat } from 'node:fs/promises'
+import { stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import {
   afterEach,
   assert,
+  beforeAll,
   beforeEach,
   describe,
   expect,
   it,
-  onTestFailed,
-  onTestFinished,
+  vi,
 } from 'vitest'
 import { createTempDir } from './temp_dir'
-import { promisify } from 'node:util'
 import { ChildProcess, exec } from 'node:child_process'
 import { sleep } from '../../../test/util'
+import {
+  cleanupTempDir,
+  snapshotTempDir,
+  stubTempDir,
+  tmpDirPattern,
+} from './_test_util'
 
-export const tmpDirPattern = /^go-wasm-.{6}$/
-
-const promisifiedExec = promisify(exec)
-
-export function isTempDir(file: Dirent) {
-  return file.isDirectory() && file.name.match(tmpDirPattern)
-}
-
-export async function cleanupTempDir() {
-  const baseDir = tmpdir()
-  const files = await readdir(baseDir, { withFileTypes: true })
-
-  await Promise.all(
-    files.map((file) =>
-      isTempDir(file)
-        ? rm(join(baseDir, file.name), {
-            recursive: true,
-            force: true,
-          })
-        : null
-    )
-  ).catch(console.error)
-}
-
-export async function snapshotTempDir() {
-  const files = await readdir(tmpdir(), { withFileTypes: true })
-  return files.filter(isTempDir)
-}
+const tempDirStub = './test/tmp/default-builders-temp-dir-test'
 
 describe('Temporary directory creation', () => {
-  beforeEach(cleanupTempDir)
+  beforeAll(async () => {
+    await stubTempDir(tempDirStub)
+
+    return () => {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  afterEach(cleanupTempDir)
 
   it('create temporary directory correctly', async () => {
     await cleanupTempDir()
@@ -82,6 +67,14 @@ function waitForSignal(process: ChildProcess, signal: string) {
 }
 
 describe('Temporary directory cleanup', () => {
+  beforeAll(async () => {
+    await stubTempDir(tempDirStub)
+
+    return () => {
+      vi.unstubAllEnvs()
+    }
+  })
+
   let startMs: number
   let viteNode: ChildProcess
 
