@@ -6,7 +6,7 @@ import {
   snapshotTempDir,
   stubTempDir,
   tmpDirPattern,
-} from './_test_util'
+} from './util.ignore.test'
 import { mkdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -19,14 +19,14 @@ describe('Option resolving', () => {
   beforeAll(async () => {
     await stubTempDir(tempDirStub)
   })
+  beforeAll(cleanupTempDir)
 
   beforeEach(() => {
     vi.stubEnv('GOROOT', goRootStub)
   })
+  beforeEach(cleanupTempDir)
 
   afterEach(vi.unstubAllEnvs)
-
-  beforeEach(cleanupTempDir)
 
   it('resolves options.binaryPath correctly', async () => {
     expect(await resolveOptions({ binaryPath: 'a path' }))

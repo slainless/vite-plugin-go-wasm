@@ -19,7 +19,7 @@ import {
   snapshotTempDir,
   stubTempDir,
   tmpDirPattern,
-} from './_test_util'
+} from './util.ignore.test'
 
 const tempDirStub = './test/tmp/default-builders-temp-dir-test'
 
@@ -31,6 +31,7 @@ describe('Temporary directory creation', () => {
       vi.unstubAllEnvs()
     }
   })
+  beforeAll(cleanupTempDir)
 
   afterEach(cleanupTempDir)
 
