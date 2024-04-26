@@ -1,4 +1,4 @@
-import { mkdir, stat, writeFile } from 'node:fs/promises'
+import { mkdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import {
@@ -9,9 +9,10 @@ import {
   describe,
   expect,
   it,
+  onTestFinished,
   vi,
 } from 'vitest'
-import { createTempDir } from './temp_dir'
+import { createTempDir, removeTempDirSync } from './temp_dir'
 import { ChildProcess, exec } from 'node:child_process'
 import { sleep } from '../../../test/util'
 import {
@@ -22,11 +23,10 @@ import {
   tmpDirPattern,
 } from './util.test'
 
-const tempDirStub = './test/tmp/default-builders-temp-dir-test'
-
 describe('Temporary directory creation', () => {
+  const tempDir = './test/tmp/default-builders-temp-dir-test'
   beforeAll(async () => {
-    await stubTempDir(tempDirStub)
+    await stubTempDir(tempDir)
 
     return () => {
       vi.unstubAllEnvs()
@@ -36,7 +36,7 @@ describe('Temporary directory creation', () => {
 
   afterEach(cleanupTempDir)
 
-  it('create temporary directory correctly', async () => {
+  it('creates temporary directory correctly', async () => {
     await cleanupTempDir()
 
     const now = Date.now()
@@ -56,7 +56,7 @@ describe('Temporary directory creation', () => {
       .and.equal(basename(p))
 
     const stats = await stat(join(tmpdir(), snapshot[0].name))
-    expect(stats.ctimeMs).to.be.greaterThan(now)
+    expect(stats.ctimeMs).to.be.greaterThanOrEqual(now)
   })
 })
 
@@ -69,8 +69,10 @@ function waitForSignal(process: ChildProcess, signal: string) {
 }
 
 describe('Temporary directory cleanup', () => {
+  const tempDir = './test/tmp/default-builders-temp-dir-test'
+
   beforeAll(async () => {
-    await stubTempDir(tempDirStub)
+    await stubTempDir(tempDir)
 
     return () => {
       vi.unstubAllEnvs()
@@ -83,14 +85,14 @@ describe('Temporary directory cleanup', () => {
   beforeEach(async () => {
     await cleanupTempDir()
 
-    startMs = Date.now()
+    startMs = Math.round(Date.now())
     if (viteNode?.exitCode == null) viteNode?.kill('SIGKILL')
     viteNode = exec('npx vite-node ./test/runner/create_temporary_dir.ts')
     assert.exists(viteNode.stdin)
     assert.exists(viteNode.stdout)
   })
 
-  it('destroy temporary directory on normal process exit', async () => {
+  it('destroys temporary directory on normal process exit', async () => {
     await waitForSignal(viteNode, 'temp_dir_created')
 
     let snapshot = await snapshotTempDir()
@@ -101,7 +103,7 @@ describe('Temporary directory cleanup', () => {
       .that.match(tmpDirPattern)
 
     const stats = await stat(join(tmpdir(), snapshot[0].name))
-    expect(stats.ctimeMs).to.be.greaterThan(startMs)
+    expect(stats.ctimeMs).to.be.greaterThanOrEqual(startMs)
 
     viteNode.stdin!.write('test_done')
     await sleep(200)
@@ -111,7 +113,7 @@ describe('Temporary directory cleanup', () => {
     expect(snapshot).to.be.lengthOf(0)
   })
 
-  it('destroy temporary directory on interrupt', async () => {
+  it('destroys temporary directory on interrupt', async () => {
     await waitForSignal(viteNode, 'temp_dir_created')
 
     let snapshot = await snapshotTempDir()
@@ -122,7 +124,7 @@ describe('Temporary directory cleanup', () => {
       .that.match(tmpDirPattern)
 
     const stats = await stat(join(tmpdir(), snapshot[0].name))
-    expect(stats.ctimeMs).to.be.greaterThan(startMs)
+    expect(stats.ctimeMs).to.be.greaterThanOrEqual(startMs)
 
     viteNode.kill('SIGINT')
     await sleep(200)
@@ -131,7 +133,8 @@ describe('Temporary directory cleanup', () => {
     snapshot = await snapshotTempDir()
     expect(snapshot).to.be.lengthOf(0)
   })
-  it('destroy temporary directory on process crashing', async () => {
+
+  it('destroys temporary directory on process crashing', async () => {
     await waitForSignal(viteNode, 'temp_dir_created')
 
     let snapshot = await snapshotTempDir()
@@ -142,7 +145,7 @@ describe('Temporary directory cleanup', () => {
       .that.match(tmpDirPattern)
 
     const stats = await stat(join(tmpdir(), snapshot[0].name))
-    expect(stats.ctimeMs).to.be.greaterThan(startMs)
+    expect(stats.ctimeMs).to.be.greaterThanOrEqual(startMs)
 
     viteNode.stdin!.write('throw_error')
     await sleep(200)
@@ -154,8 +157,40 @@ describe('Temporary directory cleanup', () => {
 })
 
 describe('Temporary directory removal implementation', () => {
-  it("silently return without doing anything when basename don't match with temp dir pattern", async () => {
-    await mkdir('./test/tmp/to_be_removed').catch(ignoreExist)
-    // await remove
+  it('deletes directory that match temp dir pattern correctly', async () => {
+    const dir = './test/tmp/go-wasm-abcdef'
+
+    onTestFinished(async () => {
+      await rm(dir, { recursive: true, force: true })
+    })
+
+    await mkdir(dir).catch(ignoreExist)
+    expect(() => removeTempDirSync(dir)).to.not.throw()
+    try {
+      await stat(dir)
+      assert.fail('Reading the directory should throw error')
+    } catch (e) {
+      expect(e).to.be.instanceOf(Error).and.include({
+        errno: -4058,
+        code: 'ENOENT',
+      })
+    }
+  })
+
+  it("silently returns without doing anything when basename don't match with temp dir pattern", async () => {
+    const dir = './test/tmp/go-wasm-abcd'
+
+    onTestFinished(async () => {
+      await rm(dir, { recursive: true, force: true })
+    })
+
+    await mkdir(dir).catch(ignoreExist)
+    expect(() => removeTempDirSync(dir)).to.not.throw()
+
+    try {
+      await stat(dir)
+    } catch (e) {
+      assert.fail('Reading the directory should not throw error')
+    }
   })
 })
