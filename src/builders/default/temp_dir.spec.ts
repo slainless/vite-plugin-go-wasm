@@ -2,6 +2,7 @@ import { mkdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import {
+  afterAll,
   afterEach,
   assert,
   beforeAll,
@@ -23,22 +24,26 @@ import {
   tmpDirPattern,
 } from './util.test'
 
+const baseTempDir = join(
+  process.env.PATH_TEMP_DIR!,
+  'default_builders_temp_dir'
+)
+
+beforeAll(async () => {
+  await cleanupTempDir(baseTempDir)
+})
+afterAll(() => rm(baseTempDir, { force: true, recursive: true }))
+afterAll(() => {
+  vi.unstubAllEnvs()
+})
+
+beforeEach(async () => {
+  await stubTempDir(baseTempDir)
+  await cleanupTempDir(baseTempDir)
+})
+
 describe('Temporary directory creation', () => {
-  const tempDir = './test/tmp/default-builders-temp-dir-test'
-  beforeAll(async () => {
-    await stubTempDir(tempDir)
-
-    return () => {
-      vi.unstubAllEnvs()
-    }
-  })
-  beforeAll(cleanupTempDir)
-
-  afterEach(cleanupTempDir)
-
   it('creates temporary directory correctly', async () => {
-    await cleanupTempDir()
-
     const now = Date.now()
     let p: string
     try {
@@ -47,7 +52,7 @@ describe('Temporary directory creation', () => {
       assert.fail(`Should have successfully create temp dir, instead got: ${e}`)
     }
 
-    const snapshot = await snapshotTempDir()
+    const snapshot = await snapshotTempDir(baseTempDir)
     expect(snapshot)
       .to.be.lengthOf(1)
       .and.have.property('0')
@@ -69,21 +74,11 @@ function waitForSignal(process: ChildProcess, signal: string) {
 }
 
 describe('Temporary directory cleanup', () => {
-  const tempDir = './test/tmp/default-builders-temp-dir-test'
-
-  beforeAll(async () => {
-    await stubTempDir(tempDir)
-
-    return () => {
-      vi.unstubAllEnvs()
-    }
-  })
-
   let startMs: number
   let viteNode: ChildProcess
 
   beforeEach(async () => {
-    await cleanupTempDir()
+    await cleanupTempDir(baseTempDir)
 
     startMs = Math.round(Date.now())
     if (viteNode?.exitCode == null) viteNode?.kill('SIGKILL')
@@ -95,7 +90,7 @@ describe('Temporary directory cleanup', () => {
   it('destroys temporary directory on normal process exit', async () => {
     await waitForSignal(viteNode, 'temp_dir_created')
 
-    let snapshot = await snapshotTempDir()
+    let snapshot = await snapshotTempDir(baseTempDir)
     expect(snapshot)
       .to.be.lengthOf(1)
       .and.have.property('0')
@@ -109,14 +104,14 @@ describe('Temporary directory cleanup', () => {
     await sleep(200)
     expect(viteNode.exitCode).to.equal(0)
 
-    snapshot = await snapshotTempDir()
+    snapshot = await snapshotTempDir(baseTempDir)
     expect(snapshot).to.be.lengthOf(0)
   })
 
   it('destroys temporary directory on interrupt', async () => {
     await waitForSignal(viteNode, 'temp_dir_created')
 
-    let snapshot = await snapshotTempDir()
+    let snapshot = await snapshotTempDir(baseTempDir)
     expect(snapshot)
       .to.be.lengthOf(1)
       .and.have.property('0')
@@ -130,14 +125,14 @@ describe('Temporary directory cleanup', () => {
     await sleep(200)
     expect(viteNode.exitCode).to.not.equal(0)
 
-    snapshot = await snapshotTempDir()
+    snapshot = await snapshotTempDir(baseTempDir)
     expect(snapshot).to.be.lengthOf(0)
   })
 
   it('destroys temporary directory on process crashing', async () => {
     await waitForSignal(viteNode, 'temp_dir_created')
 
-    let snapshot = await snapshotTempDir()
+    let snapshot = await snapshotTempDir(baseTempDir)
     expect(snapshot)
       .to.be.lengthOf(1)
       .and.have.property('0')
@@ -151,7 +146,7 @@ describe('Temporary directory cleanup', () => {
     await sleep(200)
     expect(viteNode.exitCode).to.not.equal(0)
 
-    snapshot = await snapshotTempDir()
+    snapshot = await snapshotTempDir(baseTempDir)
     expect(snapshot).to.be.lengthOf(0)
   })
 })

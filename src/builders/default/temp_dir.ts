@@ -1,5 +1,5 @@
 import exitHook from 'exit-hook'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdir, mkdtemp } from 'node:fs/promises'
 import { rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
@@ -17,6 +17,7 @@ export function removeTempDirSync(dir: string) {
 }
 
 export async function createTempDir() {
+  await mkdir(tmpdir(), { recursive: true })
   const p = await mkdtemp(join(tmpdir(), 'go-wasm-'))
   exitHook(() => {
     removeTempDirSync(p)

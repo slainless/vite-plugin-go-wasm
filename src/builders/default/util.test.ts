@@ -10,14 +10,19 @@ export function isTempDir(file: Dirent) {
   return file.isDirectory() && file.name.match(tmpDirPattern)
 }
 
-export async function cleanupTempDir() {
-  const baseDir = tmpdir()
-  const files = await readdir(baseDir, { withFileTypes: true })
+export async function cleanupTempDir(dir: string) {
+  let files: Dirent[]
+  try {
+    files = await readdir(dir, { withFileTypes: true })
+  } catch (e) {
+    if (getSystemErrorName(e.errno) == 'ENOENT') return
+    throw e
+  }
 
   await Promise.all(
     files.map((file) =>
       isTempDir(file)
-        ? rm(join(baseDir, file.name), {
+        ? rm(join(dir, file.name), {
             recursive: true,
             force: true,
           })
@@ -26,8 +31,8 @@ export async function cleanupTempDir() {
   ).catch(console.error)
 }
 
-export async function snapshotTempDir() {
-  const files = await readdir(tmpdir(), { withFileTypes: true })
+export async function snapshotTempDir(dir: string) {
+  const files = await readdir(dir, { withFileTypes: true })
   return files.filter(isTempDir)
 }
 

@@ -1,4 +1,14 @@
-import { assert, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  assert,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from 'vitest'
 import { resolveOptions } from './config'
 import { afterEach } from 'node:test'
 import {
@@ -7,49 +17,117 @@ import {
   stubTempDir,
   tmpDirPattern,
 } from './util.test'
-import { mkdir, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { rm, stat } from 'node:fs/promises'
+import { join, normalize } from 'node:path'
 import { tmpdir } from 'node:os'
-import { getSystemErrorName } from 'node:util'
+import { Code, GoWasmError } from '../../error'
 
-const goRootStub = '/test/path/to/go'
-const tempDirStub = './test/tmp/default-builders-config-test'
+const baseTempDir = join(process.env.PATH_TEMP_DIR!, 'default_builders_config')
+
+const goBinaryPathStub =
+  `${process.env.PATH_GOROOT!}/bin/go` +
+  (process.platform == 'win32' ? '.exe' : '')
+
+beforeAll(() => cleanupTempDir(baseTempDir))
+afterAll(() => rm(baseTempDir, { force: true, recursive: true }))
+afterAll(() => {
+  vi.unstubAllEnvs()
+})
+
+beforeEach(async () => {
+  vi.stubEnv('GOROOT', process.env.PATH_GOROOT!)
+  await stubTempDir(baseTempDir)
+  await cleanupTempDir(baseTempDir)
+})
 
 describe('Option resolving', () => {
-  beforeAll(async () => {
-    await stubTempDir(tempDirStub)
-  })
-  beforeAll(cleanupTempDir)
-
-  beforeEach(() => {
-    vi.stubEnv('GOROOT', goRootStub)
-  })
-  beforeEach(cleanupTempDir)
-
-  afterEach(vi.unstubAllEnvs)
-
   it('resolves options.binaryPath correctly', async () => {
-    expect(await resolveOptions({ binaryPath: 'a path' }))
+    expect(await resolveOptions({ binaryPath: goBinaryPathStub }))
       .to.have.property('binaryPath')
-      .that.is.equal('a path')
+      .that.is.equal(goBinaryPathStub)
+  })
+
+  it(`throws error when file the binaryPath points to doesn't exist`, async () => {
+    expect.assertions(1)
+    try {
+      await resolveOptions({ binaryPath: 'go to hell' })
+    } catch (e) {
+      expect(e)
+        // @ts-expect-error
+        .to.be.instanceOf(AggregateError)
+        .and.has.property('errors')
+        .that.has.property('0')
+        .which.is.an.instanceOf(GoWasmError)
+        .and.has.property('code')
+        .that.is.equal(Code.BINARY_READ_FAILED)
+    }
   })
 
   it('resolves options.binaryPath to GOROOT fallback path if its empty', async () => {
-    expect(process.env.GOROOT).to.be.equal(goRootStub)
+    expect(process.env.GOROOT).to.be.equal(process.env.PATH_GOROOT)
     expect(await resolveOptions())
       .to.have.property('binaryPath')
-      .that.is.equal(`${goRootStub}/bin/go`)
+      .that.is.equal(goBinaryPathStub)
   })
 
   it('throws error when both process.env.GOROOT and options.binaryPath are empty', async () => {
     vi.unstubAllEnvs()
-    expect.assertions(2)
+    expect.assertions(1)
     try {
       await resolveOptions()
-      assert.fail(`Should have thrown error`)
     } catch (e) {
-      expect(e).to.be.instanceOf(Error)
-      expect(e?.toString()).toContain('Cannot determine builder binary')
+      expect(e)
+        .to.be.instanceOf(GoWasmError)
+        .and.has.property('code')
+        .that.is.equal(Code.UNSET_BINARY_PATH)
+    }
+  })
+
+  it('normalize binary extension correctly when depends on GOROOT (specifically for Windows user)', async () => {
+    onTestFinished(() => {
+      vi.unstubAllGlobals()
+    })
+    const base = goBinaryPathStub.split('.').slice(0, -1).join('.')
+    const platform = process.platform
+    assert.include(
+      ['win32', 'linux', 'darwin'],
+      platform,
+      'Test should be ran on supported OS: Windows, Linux, Darwin'
+    )
+
+    // should success
+    vi.stubGlobal('process', {
+      ...process,
+      platform,
+    })
+    expect(await resolveOptions())
+      .to.have.property('binaryPath')
+      .that.is.equal(base + (platform == 'win32' ? '.exe' : ''))
+
+    // should throw error since cross-platform and using wrong extension...
+    vi.stubGlobal('process', {
+      ...process,
+      platform: platform == 'win32' ? 'linux' : 'win32',
+    })
+    try {
+      await resolveOptions()
+    } catch (e) {
+      expect(e)
+        // @ts-expect-error
+        .to.be.an.instanceOf(AggregateError)
+        .and.has.property('errors')
+
+      expect(e.errors)
+        .to.has.property('0')
+        .which.is.an.instanceOf(GoWasmError)
+        .and.has.property('code')
+        .that.is.equal(Code.BINARY_READ_FAILED)
+
+      expect(e.errors)
+        .to.has.property('1')
+        .which.is.an.instanceOf(Error)
+        .and.has.property('path')
+        .that.is.equal(normalize(join(process.cwd(), base)))
     }
   })
 
@@ -60,8 +138,6 @@ describe('Option resolving', () => {
   })
 
   it('creates temporary directory if options.buildDir is empty', async () => {
-    await cleanupTempDir()
-
     const now = Date.now()
     try {
       await resolveOptions()
@@ -69,7 +145,7 @@ describe('Option resolving', () => {
       assert.fail(`Should resolve options, instead got: ${e}`)
     }
 
-    const snapshot = await snapshotTempDir()
+    const snapshot = await snapshotTempDir(baseTempDir)
     expect(snapshot)
       .to.be.lengthOf(1)
       .and.have.property('0')

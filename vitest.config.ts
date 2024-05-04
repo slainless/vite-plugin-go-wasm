@@ -18,5 +18,6 @@ export default defineConfig({
     coverage: {
       exclude,
     },
+    setupFiles: ['dotenv/config'],
   },
 })
